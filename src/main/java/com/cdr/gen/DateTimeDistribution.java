@@ -223,23 +223,48 @@ public class DateTimeDistribution {
      * @return The day of the phone call
      */
     public int getDayOfWeek() {
-        double tmpRnd = 1;
-        int currWeek;
-        
-        while (tmpRnd > 0) {
-            tmpRnd = random.nextDouble();
-            
-            for (int k=0; k<size(); k++) {
-                if (tmpRnd - getVal(k) > 0) {
-                    tmpRnd -= getVal(k);
-                } else {
-                    currWeek = (int) (random.nextDouble() * (dateRange / 7));
-                    return (currWeek * 7 - startDate.getDayOfWeek()) + (k+1);
-                }
+        // 1. Choose a day of the week (k) based on distribution
+        double tmpRnd = random.nextDouble();
+        int k = 0; // default to Sunday
+        for (int i=0; i<size(); i++) {
+            if (tmpRnd - getVal(i) > 0) {
+                tmpRnd -= getVal(i);
+            } else {
+                k = i;
+                break;
             }
         }
+
+        // k is now the chosen day of week (0=sun, 1=mon, ..., 6=sat)
+        // Map this to JodaTime's day of week.
+        // Joda: mon=1, tue=2, ..., sat=6, sun=7
+        int targetJodaDay = (k == 0) ? 7 : k;
+
+        // 2. Find the offset of the first occurrence of this day of week.
+        int startJodaDay = startDate.getDayOfWeek();
+        int dayDiff = targetJodaDay - startJodaDay;
+        if (dayDiff < 0) {
+            dayDiff += 7;
+        }
+
+        // 3. Find how many times this day of week occurs in the range.
+        int numOccurrences = 0;
+        if (dayDiff < dateRange) {
+            numOccurrences = (dateRange - 1 - dayDiff) / 7 + 1;
+        }
         
-        return 1;
+        if (numOccurrences == 0) {
+            // This day of week does not occur in the range. Fallback to random day.
+            return random.nextInt(dateRange);
+        }
+
+        // 4. Pick one of these occurrences randomly.
+        int randomOccurrence = random.nextInt(numOccurrences); // 0 to numOccurrences-1
+
+        // 5. Calculate the final day offset.
+        int dayOffset = dayDiff + randomOccurrence * 7;
+
+        return dayOffset;
     }
     
     /**
