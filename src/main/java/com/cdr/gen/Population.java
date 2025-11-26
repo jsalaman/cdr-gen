@@ -54,37 +54,32 @@ public class Population {
      * Create the population
      */
     public void create() {
-        RandomGaussian gaussNum;
+        double gaussNum;
         
-        for (int i=0; i<size; i+=2) {
-            LOG.info("Creating person " + (i+1) + " and " + (i+2));
-            Person personOne = new Person();
-            Person personTwo = new Person();
+        for (int i=0; i<size; i++) {
+            LOG.info("Creating person " + (i+1));
+            Person person = new Person();
             
             // create the phone number
             LOG.info("Generating phone numbers");
-            personOne.setPhoneNumber(getRandomPhoneNumber());
-            personTwo.setPhoneNumber(getRandomPhoneNumber());
+            person.setPhoneNumber(getRandomPhoneNumber());
             
             // calculate the number of calls made
             LOG.info("Calculating number of calls made");
             gaussNum = getRandomGaussian(callsMade.get("stdDev"), callsMade.get("mean"));
 
-            personOne.setNumCalls(gaussNum.getValueOne().longValue());
-            personTwo.setNumCalls(gaussNum.getValueTwo().longValue());
+            person.setNumCalls((long) gaussNum);
             
             // calculate the average duration of a call per type
             LOG.info("Calculating the average duration of a call per type");
             for (String callType : callTypes) {
                 // peak time
                 gaussNum = getAvgCallDuration(callType, false);
-                personOne.getAvgCallDuration().put(callType, gaussNum.getValueOne().longValue());
-                personTwo.getAvgCallDuration().put(callType, gaussNum.getValueTwo().longValue());
+                person.getAvgCallDuration().put(callType, (long) gaussNum);
                 
                 // off peak
                 gaussNum = getAvgCallDuration(callType, true);
-                personOne.getAvgOffPeakCallDuration().put(callType, gaussNum.getValueOne().longValue());
-                personTwo.getAvgOffPeakCallDuration().put(callType, gaussNum.getValueTwo().longValue());
+                person.getAvgOffPeakCallDuration().put(callType, (long) gaussNum);
             }
             
             // generate the number of phone lines
@@ -92,26 +87,19 @@ public class Population {
             if (phoneLines.get("mean") > 1) {
                 if (phoneLines.get("stdDev") > 1) {
                     gaussNum = getRandomGaussian(phoneLines.get("stdDev"), phoneLines.get("mean"));
-                    personOne.setPhoneLines(gaussNum.getValueOne().intValue());
-                    personTwo.setPhoneLines(gaussNum.getValueTwo().intValue());
+                    person.setPhoneLines((int) gaussNum);
                 } else {
-                    personOne.setPhoneLines(((Long)phoneLines.get("mean")).intValue());
-                    personTwo.setPhoneLines(((Long)phoneLines.get("mean")).intValue());
+                    person.setPhoneLines(((Long)phoneLines.get("mean")).intValue());
                 }
             } else {
-                personOne.setPhoneLines(1);
-                personTwo.setPhoneLines(1);
+                person.setPhoneLines(1);
             }
             
             // create the user calls
             LOG.info("Creating the calls for person " + (i+1));
-            createCalls(personOne);
-            
-            LOG.info("Creating the calls for person " + (i+2));
-            createCalls(personTwo);
+            createCalls(person);
 
-            population.add(personOne);
-            population.add(personTwo);
+            population.add(person);
         }
     }
     
@@ -121,12 +109,12 @@ public class Population {
      * @param mean The average
      * @return A set of two random numbers
      */
-    protected RandomGaussian getRandomGaussian(long stdDev, long mean) {
-        RandomGaussian gaussNum;
+    protected double getRandomGaussian(long stdDev, long mean) {
+        double gaussNum;
         
         do {
-            gaussNum = RandomGaussian.generate(stdDev, mean);
-        } while (gaussNum.getValueOne() < 1 || gaussNum.getValueTwo() < 1);
+            gaussNum = RandomGaussian.generate(stdDev, mean).getValueOne();
+        } while (gaussNum < 1);
         
         return gaussNum;
     }
@@ -137,7 +125,7 @@ public class Population {
      * @param offPeak A boolean informing if the average is for off peak or not
      * @return A set of two random numbers
      */
-    protected RandomGaussian getAvgCallDuration(String callType, boolean offPeak) {
+    protected double getAvgCallDuration(String callType, boolean offPeak) {
         Map<String, Object> conf = (Map<String, Object>) outgoingCallParams.get(callType);
         
         String meanKey = (offPeak) ? "callOPDur" : "callDur";
